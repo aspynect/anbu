@@ -64,7 +64,7 @@ function updateUsers() {
 
 async function train(trainString: string) {
     return await new Promise((resolve, reject) => {
-        const process = spawn("python3", ["markov.py", "-train", trainString]);
+        const process = spawn("./env/bin/python", ["markov.py", "-train", trainString]);
 
         let stderr = "";
 
@@ -84,7 +84,7 @@ async function train(trainString: string) {
 
 function gen(inputString: string): Promise<string> {
     return new Promise((resolve, reject) => {
-        const process = spawn("python3", ["markov.py", "-gen", inputString]);
+        const process = spawn("./env/bin/python", ["markov.py", "-gen", inputString]);
 
         let stdout = "";
         let stderr = "";
@@ -262,7 +262,7 @@ jetSocket.addEventListener("message", async event => {
     if (msg.kind !== "commit" || msg.commit?.operation !== "create") return;
     console.log(msg)
 
-    const postContents = `"${msg.commit.record.text}`
+    const postContents = `${msg.commit.record.text}`
     if (postContents.length < 12) return;
 
     const interactionDid = msg.did
@@ -284,7 +284,7 @@ jetSocket.addEventListener("message", async event => {
                 trainingString += msg.reply.parent.record.text + "\n"
             }
         }
-        trainingString += postContents
+        trainingString += postContents + "\n"
         await train(trainingString)
     }
     if (checkEligibility(userData)) {
