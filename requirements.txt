@@ -1,0 +1,2 @@
+sqlitedict==2.1.0
+ujson==5.11.0
