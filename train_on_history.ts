@@ -9,7 +9,6 @@ await manager.login({ identifier: secrets.username, password: secrets.password }
 console.log(manager.session);
 
 const dids: string[] = []
-let cur = ""
 
 async function train(trainString: string) {
     return await new Promise((resolve, reject) => {
@@ -32,6 +31,7 @@ async function train(trainString: string) {
 }
 
 for (const did of dids) {
+    let cur = ""
     while (true) {
         const data = await ok(
             rpc.get("app.bsky.feed.getAuthorFeed", {

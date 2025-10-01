@@ -1,6 +1,7 @@
 {
   "tasks": {
-    "start": "deno run -A ./main.ts"
+    "start": "deno run -A ./main.ts",
+    "train": "deno run -A ./train_on_history.ts"
   },
   "imports": {
     "@atcute/atproto": "npm:@atcute/atproto@^3.1.4",
