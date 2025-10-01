@@ -143,7 +143,7 @@ async function followCheck(did: string): Promise<boolean> {
     return (!!data.viewer?.followedBy && !data.viewer?.blockedBy)
 }
 
-async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: string, uri: string) {
+async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: string, uri: string): Promise<boolean> {
     let output = ""
     let tryCount = 0
     while (tryCount < 20) {
@@ -154,7 +154,7 @@ async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: st
     }
     if (!output) {
         console.log(`Failed to generate text for ${output}`)
-        return
+        return false
     }
     const data = await ok(
         rpc.post('com.atproto.repo.putRecord', {
@@ -178,6 +178,7 @@ async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: st
         }),
     );
     console.log(data)
+    return true
 }
 
 setInterval(async () => {
@@ -287,13 +288,14 @@ jetSocket.addEventListener("message", async event => {
         trainingString += postContents + "\n"
         await train(trainingString)
     }
+    let posted: boolean
     if (checkEligibility(userData)) {
-        replyToPost(postContents, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
+        posted = await replyToPost(postContents, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
     } else {
         console.log(`Ineligible for ${(new Date(userData.timestamp).getTime() - Date.now())/60000}`)
         return
     }
-    updateTimestamp(userData)
+    if (posted) updateTimestamp(userData)
     updateUsers()
 })
 
