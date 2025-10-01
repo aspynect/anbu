@@ -7,7 +7,7 @@ const rpc = new Client({ handler: manager });
 await manager.login({ identifier: secrets.username, password: secrets.password });
 console.log(manager.session);
 
-const did = "did:plc:7x6rtuenkuvxq3zsvffp2ide" // put did here
+const did = "" // put did here
 let cur = ""
 
 async function train(trainString: string) {
