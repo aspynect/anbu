@@ -1,0 +1,14 @@
+{
+  "tasks": {
+    "start": "deno run -A ./main.ts"
+  },
+  "imports": {
+    "@atcute/atproto": "npm:@atcute/atproto@^3.1.4",
+    "@atcute/bluesky": "npm:@atcute/bluesky@^3.2.3",
+    "@atcute/client": "npm:@atcute/client@^4.0.3",
+    "@atcute/lexicons": "npm:@atcute/lexicons@^1.1.1",
+    "@atcute/tid": "npm:@atcute/tid@^1.0.2",
+    "@std/assert": "jsr:@std/assert@1",
+    "@types/node": "npm:@types/node@^24.6.0"
+  }
+}

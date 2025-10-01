@@ -1,0 +1,98 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@std/assert@1": "1.0.14",
+    "jsr:@std/internal@^1.0.10": "1.0.10",
+    "npm:@atcute/atproto@^3.1.4": "3.1.4",
+    "npm:@atcute/bluesky@^3.2.3": "3.2.3",
+    "npm:@atcute/client@^4.0.3": "4.0.3",
+    "npm:@atcute/lexicons@^1.1.1": "1.1.1",
+    "npm:@atcute/tid@^1.0.2": "1.0.2",
+    "npm:@types/node@*": "24.2.0",
+    "npm:@types/node@^24.6.0": "24.6.0"
+  },
+  "jsr": {
+    "@std/assert@1.0.14": {
+      "integrity": "68d0d4a43b365abc927f45a9b85c639ea18a9fab96ad92281e493e4ed84abaa4",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@std/internal@1.0.10": {
+      "integrity": "e3be62ce42cab0e177c27698e5d9800122f67b766a0bea6ca4867886cbde8cf7"
+    }
+  },
+  "npm": {
+    "@atcute/atproto@3.1.4": {
+      "integrity": "sha512-v0/ue7mZYtjYw4vWbtda51bLwW88mqsUQB8F/UZNO18ANAQWmKq1HDceVqjvruaLe2QPqE43XM3WkEyZ2FhOrA==",
+      "dependencies": [
+        "@atcute/lexicons"
+      ]
+    },
+    "@atcute/bluesky@3.2.3": {
+      "integrity": "sha512-IdPQQ54F1BLhW5z49k81ZUC/GQl/tVygZ+CzLHYvQySHA6GJRcvPzwEf8aV21u0SZOJF+yF4CWEGNgtryyxPmg==",
+      "dependencies": [
+        "@atcute/atproto",
+        "@atcute/lexicons"
+      ]
+    },
+    "@atcute/client@4.0.3": {
+      "integrity": "sha512-RIOZWFVLca/HiPAAUDqQPOdOreCxTbL5cb+WUf5yqQOKIu5yEAP3eksinmlLmgIrlr5qVOE7brazUUzaskFCfw==",
+      "dependencies": [
+        "@atcute/identity",
+        "@atcute/lexicons"
+      ]
+    },
+    "@atcute/identity@1.1.0": {
+      "integrity": "sha512-6vRvRqJatDB+JUQsb+UswYmtBGQnSZcqC3a2y6H5DB/v5KcIh+6nFFtc17G0+3W9rxdk7k9M4KkgkdKf/YDNoQ==",
+      "dependencies": [
+        "@atcute/lexicons",
+        "@badrap/valita"
+      ]
+    },
+    "@atcute/lexicons@1.1.1": {
+      "integrity": "sha512-k6qy5p3j9fJJ6ekaMPfEfp3ni4TW/XNuH9ZmsuwC0fi0tOjp+Fa8ZQakHwnqOzFt/cVBfGcmYE/lKNAbeTjgUg==",
+      "dependencies": [
+        "esm-env"
+      ]
+    },
+    "@atcute/tid@1.0.2": {
+      "integrity": "sha512-ahmjroNyeDPJhtuf3+HTJropaH04HmJ8fhntDu73Gpz/RkAF7+nkz6kcP2QTgfvMCgMPAJUdskAAP82GPDTY9w=="
+    },
+    "@badrap/valita@0.4.6": {
+      "integrity": "sha512-4kdqcjyxo/8RQ8ayjms47HCWZIF5981oE5nIenbfThKDxWXtEHKipAOWlflpPJzZx9y/JWYQkp18Awr7VuepFg=="
+    },
+    "@types/node@24.2.0": {
+      "integrity": "sha512-3xyG3pMCq3oYCNg7/ZP+E1ooTaGB4cG8JWRsqqOYQdbWNY4zbaV0Ennrd7stjiJEFZCaybcIgpTjJWHRfBSIDw==",
+      "dependencies": [
+        "undici-types@7.10.0"
+      ]
+    },
+    "@types/node@24.6.0": {
+      "integrity": "sha512-F1CBxgqwOMc4GKJ7eY22hWhBVQuMYTtqI8L0FcszYcpYX0fzfDGpez22Xau8Mgm7O9fI+zA/TYIdq3tGWfweBA==",
+      "dependencies": [
+        "undici-types@7.13.0"
+      ]
+    },
+    "esm-env@1.2.2": {
+      "integrity": "sha512-Epxrv+Nr/CaL4ZcFGPJIYLWFom+YeV1DqMLHJoEd9SYRxNbaFruBwfEX/kkHUJf55j2+TUbmDcmuilbP1TmXHA=="
+    },
+    "undici-types@7.10.0": {
+      "integrity": "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="
+    },
+    "undici-types@7.13.0": {
+      "integrity": "sha512-Ov2Rr9Sx+fRgagJ5AX0qvItZG/JKKoBRAVITs1zk7IqZGTJUwgUr7qoYBpWwakpWilTZFM98rG/AFRocu10iIQ=="
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/assert@1",
+      "npm:@atcute/atproto@^3.1.4",
+      "npm:@atcute/bluesky@^3.2.3",
+      "npm:@atcute/client@^4.0.3",
+      "npm:@atcute/lexicons@^1.1.1",
+      "npm:@atcute/tid@^1.0.2",
+      "npm:@types/node@^24.6.0"
+    ]
+  }
+}
