@@ -303,7 +303,7 @@ spaceSocket.addEventListener("message", event => {
     console.log(msg)
     const followerDid: string = msg.link.source_record.split("/")[2]
     // TODO change the default later (actually not maybe tbh i think its fun to get a reply early)
-    users.set(followerDid, {timestamp: new Date().toISOString()/*randomFutureDate(3600000, 900000)*/, config: {baseInterval: 3600000, stdev: 900000}
+    users.set(followerDid, {timestamp: new Date().toISOString()/*randomFutureDate(3600000, 900000)*/, config: {baseInterval: 1000*60*60*24, stdev: 1000*60*60*6}
     })
     updateUsers()
 })
