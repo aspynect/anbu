@@ -227,6 +227,7 @@ setInterval(async () => {
                     break;
             }
         }
+        if (!!newInterval || !!newSTDev) updateTimestamp(userData)
         await ok(
             rpc.post("chat.bsky.convo.sendMessage", {
                 input: {
@@ -292,7 +293,7 @@ jetSocket.addEventListener("message", async event => {
     if (checkEligibility(userData)) {
         posted = await replyToPost(postContents, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
     } else {
-        console.log(`Ineligible for ${(new Date(userData.timestamp).getTime() - Date.now())/60000}`)
+        console.log(`Ineligible for ${(new Date(userData.timestamp).getTime() - Date.now())/(60*1000)}`)
         return
     }
     if (posted) updateTimestamp(userData)
