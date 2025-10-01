@@ -7,6 +7,7 @@ import * as TID from '@atcute/tid'
 import { ActorIdentifier } from "@atcute/lexicons";
 import secrets from "./secrets.json" with { type: "json" };
 import usersJson from "./users.json" with { type: "json" }
+import { spawn } from "node:child_process";
 
 type UserData = {
     timestamp: string;
@@ -17,13 +18,18 @@ type UserData = {
 }
 const users = new Map<string, UserData>(Object.entries(usersJson));
 
-
 const manager = new CredentialManager({ service: 'https://bsky.social' });
 const rpc = new Client({ handler: manager });
 await manager.login({ identifier: secrets.username, password: secrets.password });
 console.log(manager.session);
-
-const did = "did:plc:kol5skg3eq24l5hwpup2pant"
+const didData = await ok(
+		rpc.get('com.atproto.identity.resolveHandle', {
+			params: {
+				handle: secrets.username as `${string}.${string}`,
+			},
+		}),
+	);
+const did = didData.did
 // TODO set up reinitializing w/ saved cursor if available? but like lowkey not necessary and dont super gaf
 const jetURL = new URL("wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post")
 jetURL.searchParams.append("wantedDids", did)
@@ -32,7 +38,7 @@ const jetSocket = new WebSocket(jetURL);
 const spaceURL = new URL("https://spacedust.microcosm.blue/subscribe")
 spaceURL.searchParams.append("wantedSubjectDids", did)
 spaceURL.searchParams.append("wantedSources", "app.bsky.graph.follow:subject")
-spaceURL. searchParams.append("instant", "true") // TODO remove later this is for testing
+// spaceURL. searchParams.append("instant", "true")
 const spaceSocket = new WebSocket(spaceURL)
 
 
@@ -55,7 +61,57 @@ function updateUsers() {
     });
 };
 
-// TODO markov chain bullshit
+
+async function train(trainString: string) {
+    return await new Promise((resolve, reject) => {
+        const process = spawn("python3", ["markov.py", "-train", trainString]);
+
+        let stderr = "";
+
+        process.stderr.on("data", (data) => {
+            stderr += data.toString();
+        });
+
+        process.on("close", (code) => {
+        if (code !== 0) {
+            reject(new Error(`Python script exited with code ${code}: ${stderr}`));
+        } else {
+            resolve("");
+        }
+        });
+    });
+}
+
+function gen(inputString: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const process = spawn("python3", ["markov.py", "-gen", inputString]);
+
+        let stdout = "";
+        let stderr = "";
+
+        process.stdout.on("data", (data) => {
+            stdout += data.toString();
+        });
+
+        process.stderr.on("data", (data) => {
+            stderr += data.toString();
+        });
+
+        process.on("close", (code) => {
+        if (code !== 0) {
+            reject(new Error(`Python script exited with code ${code}: ${stderr}`));
+        } else {
+            const output = stdout.trim();
+            if (output === "None") {
+                resolve("");
+            } else {
+                resolve(output);
+            }
+        }
+        });
+    });
+}
+
 
 function checkEligibility(userData: UserData): boolean {
     return new Date().toISOString() > userData.timestamp
@@ -88,6 +144,18 @@ async function followCheck(did: string): Promise<boolean> {
 }
 
 async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: string, uri: string) {
+    let output = ""
+    let tryCount = 0
+    while (tryCount < 20) {
+        output = await gen(contents)
+        console.log(output)
+        if (!!output) break
+        tryCount++
+    }
+    if (!output) {
+        console.log(`Failed to generate text for ${output}`)
+        return
+    }
     const data = await ok(
         rpc.post('com.atproto.repo.putRecord', {
             input: {
@@ -96,7 +164,7 @@ async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: st
                 rkey: TID.now(),
                 record: {
                     $type: "app.bsky.feed.post",
-                    text: contents,
+                    text: output,
                     createdAt: new Date().toISOString(),
                     reply: {
                         parent: {
@@ -145,7 +213,6 @@ setInterval(async () => {
         let newSTDev: string = ""
         for (const message of messageData.messages.reverse()) {
             if(message.$type !== 'chat.bsky.convo.defs#messageView') continue
-            // TODO actually do smth with the messages here
             const command = message.text.split(" ")
             if (command.length !== 2 || !Number(command[1])) continue
             switch (command[0]) {
@@ -183,7 +250,7 @@ setInterval(async () => {
     )
     console.log("DMs processed")
     updateUsers()
-}, 10 * 1000)
+}, 30 * 1000)
 
 jetSocket.onopen = () => {
     updateUsers()
@@ -192,21 +259,36 @@ jetSocket.onopen = () => {
 jetSocket.addEventListener("message", async event => {
     if (typeof event.data !== "string") return;
     const msg = JSON.parse(event.data)
-    if (msg.kind !== "commit" || msg.commit?.operation !== "create") return
+    if (msg.kind !== "commit" || msg.commit?.operation !== "create") return;
     console.log(msg)
+
+    const postContents = `"${msg.commit.record.text}`
+    if (postContents.length < 12) return;
 
     const interactionDid = msg.did
     const userData = users.get(interactionDid)
     if (!userData) return
+
     if (!await followCheck(interactionDid)) {
         users.delete(interactionDid)
         updateUsers()
         console.log(`Removed user ${interactionDid}`)
         return
     }
-    // TODO if still following, train with post
+    {
+        let trainingString = ""
+        if (msg.reply?.parent.$type === "app.bsky.feed.defs#postView") {
+            const parentText = msg.reply.parent.record.text
+            if (typeof parentText === "string" && parentText.length >= 10) {
+                console.log("parent: " + parentText)
+                trainingString += msg.reply.parent.record.text + "\n"
+            }
+        }
+        trainingString += postContents
+        await train(trainingString)
+    }
     if (checkEligibility(userData)) {
-        replyToPost("awawa", msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
+        replyToPost(postContents, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
     } else {
         console.log(`Ineligible for ${(new Date(userData.timestamp).getTime() - Date.now())/60000}`)
         return
@@ -220,7 +302,7 @@ spaceSocket.addEventListener("message", event => {
     const msg = JSON.parse(event.data)
     console.log(msg)
     const followerDid: string = msg.link.source_record.split("/")[2]
-    // TODO change the default later
+    // TODO change the default later (actually not maybe tbh i think its fun to get a reply early)
     users.set(followerDid, {timestamp: new Date().toISOString()/*randomFutureDate(3600000, 900000)*/, config: {baseInterval: 3600000, stdev: 900000}
     })
     updateUsers()
