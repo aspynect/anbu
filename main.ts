@@ -153,7 +153,7 @@ async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: st
         tryCount++
     }
     if (!output) {
-        console.log(`Failed to generate text for ${contents}`)
+        console.log(`Failed to generate text for "${contents}"`)
         return false
     }
     const data = await ok(
