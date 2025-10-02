@@ -127,8 +127,8 @@ markov = Markov()
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-train", action="store_true", help="train mode, input from stdin")
-parser.add_argument("-gen", type=str, help="generate mode, input string")
+parser.add_argument("-train", action="store_true")
+parser.add_argument("-gen", action="store_true")
 args = parser.parse_args()
 
 if args.train:
@@ -138,7 +138,7 @@ if args.train:
     markov.learn(in_dict)
 
 elif args.gen:
-    genText = args.gen + "\n"
+    genText = sys.stdin.read().strip() + "\n"
     print(markov.gen(genText))
     # removed bc it breaks shit lmao
     # if markov.hasResponse(genText):

@@ -70,9 +70,9 @@ function unescapeNewlines(input: string): string {
 }
 
 
-async function train(trainString: string) {
+async function train(trainString: string): Promise<void> {
     return await new Promise((resolve, reject) => {
-        const process = spawn("./env/bin/python", ["markov.py", "-train", trainString]);
+        const process = spawn("./env/bin/python", ["markov.py", "-train"]);
 
         let stderr = "";
 
@@ -81,18 +81,23 @@ async function train(trainString: string) {
         });
 
         process.on("close", (code) => {
-        if (code !== 0) {
-            reject(new Error(`Python script exited with code ${code}: ${stderr}`));
-        } else {
-            resolve("");
-        }
+            if (code !== 0) {
+                reject(new Error(`Python script exited with code ${code}: ${stderr}`));
+            } else {
+                resolve();
+            }
         });
+
+        // ✅ send the training text to stdin
+        process.stdin.write(trainString);
+        process.stdin.end();
     });
 }
 
+
 async function gen(inputString: string): Promise<string | null> {
     return await new Promise((resolve, reject) => {
-        const process = spawn("./env/bin/python", ["markov.py", "-gen", inputString]);
+        const process = spawn("./env/bin/python", ["markov.py", "-gen"]);
 
         let stdout = "";
         let stderr = "";
@@ -117,8 +122,13 @@ async function gen(inputString: string): Promise<string | null> {
                 }
             }
         });
+
+        process.stdin.write(inputString);
+        process.stdin.end();
     });
 }
+
+
 
 
 
