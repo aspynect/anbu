@@ -10,6 +10,10 @@ console.log(manager.session);
 
 const dids: string[] = []
 
+function escapeNewlines(input: string): string {
+    return input.replace(/\n/g, "\\n");
+}
+
 function train(trainString: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const process = spawn("./env/bin/python", ["markov.py", "-train"]);
@@ -62,10 +66,10 @@ for (const did of dids) {
                 const parentText = post.reply.parent.record.text
                 if (typeof parentText === "string" && parentText.length >= 10) {
                     console.log("parent: " + parentText)
-                    trainingString += post.reply.parent.record.text + "\n"
+                    trainingString += escapeNewlines(parentText) + "\n"
                 }
             }
-            trainingString += post.post.record.text + "\n"
+            trainingString += escapeNewlines(postText) + "\n"
             await train(trainingString)
         }
     }

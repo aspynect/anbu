@@ -61,6 +61,14 @@ function updateUsers() {
     });
 };
 
+function escapeNewlines(input: string): string {
+    return input.replace(/\n/g, "\\n");
+}
+
+function unescapeNewlines(input: string): string {
+    return input.replace(/\\n/g, "\n");
+}
+
 
 async function train(trainString: string) {
     return await new Promise((resolve, reject) => {
@@ -82,8 +90,8 @@ async function train(trainString: string) {
     });
 }
 
-function gen(inputString: string): Promise<string> {
-    return new Promise((resolve, reject) => {
+async function gen(inputString: string): Promise<string | null> {
+    return await new Promise((resolve, reject) => {
         const process = spawn("./env/bin/python", ["markov.py", "-gen", inputString]);
 
         let stdout = "";
@@ -98,19 +106,20 @@ function gen(inputString: string): Promise<string> {
         });
 
         process.on("close", (code) => {
-        if (code !== 0) {
-            reject(new Error(`Python script exited with code ${code}: ${stderr}`));
-        } else {
-            const output = stdout.trim();
-            if (output === "None") {
-                resolve("");
+            if (code !== 0) {
+                reject(new Error(`Python script exited with code ${code}: ${stderr}`));
             } else {
-                resolve(output);
+                const raw = stdout.trim();
+                if (!raw || raw === "None") {
+                    resolve(null);
+                } else {
+                    resolve(unescapeNewlines(raw));
+                }
             }
-        }
         });
     });
 }
+
 
 
 function checkEligibility(userData: UserData): boolean {
@@ -144,13 +153,13 @@ async function followCheck(did: string): Promise<boolean> {
 }
 
 async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: string, uri: string): Promise<boolean> {
-    let output = ""
+    let output: string | null = null;
     let tryCount = 0
     while (tryCount < 20) {
-        output = await gen(contents)
-        console.log(output)
-        if (!!output) break
-        tryCount++
+        output = await gen(contents);
+        console.log(output);
+        if (output) break;
+        tryCount++;
     }
     if (!output) {
         console.log(`Failed to generate text for "${contents}"`)
@@ -283,10 +292,10 @@ jetSocket.addEventListener("message", async event => {
             const parentText = msg.reply.parent.record.text
             if (typeof parentText === "string" && parentText.length >= 10) {
                 console.log("parent: " + parentText)
-                trainingString += msg.reply.parent.record.text + "\n"
+                trainingString += escapeNewlines(parentText) + "\n"
             }
         }
-        trainingString += postContents + "\n"
+        trainingString += escapeNewlines(postContents) + "\n"
         await train(trainingString)
     }
     let posted: boolean
