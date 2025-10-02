@@ -30,7 +30,8 @@ const didData = await ok(
 		}),
 	);
 const did = didData.did
-// TODO set up reinitializing w/ saved cursor if available? but like lowkey not necessary and dont super gaf
+
+
 const jetURL = new URL("wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post")
 jetURL.searchParams.append("wantedDids", did)
 const jetSocket = new WebSocket(jetURL);
@@ -127,9 +128,6 @@ async function gen(inputString: string): Promise<string | null> {
         process.stdin.end();
     });
 }
-
-
-
 
 
 function checkEligibility(userData: UserData): boolean {
@@ -276,6 +274,7 @@ setInterval(async () => {
 jetSocket.onopen = () => {
     updateUsers()
 }
+
 
 jetSocket.addEventListener("message", async event => {
     if (typeof event.data !== "string") return;
