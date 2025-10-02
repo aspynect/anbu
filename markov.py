@@ -1,4 +1,4 @@
-import argparse
+import argparse, sys
 from sqlitedict import SqliteDict
 import ujson
 import random
@@ -28,7 +28,7 @@ class Markov():
         db = self.open_database()
         i = 0
         for keyString in in_dict:
-            print(i)
+            # print(i)
             value = in_dict[keyString]
             if keyString in db:
                 db_value = db[keyString]
@@ -64,13 +64,18 @@ class Markov():
     def gen_attempt(self, db, key):
         msg = ""
         for i in range(self.__output_max):
+            # print(key)
             if key not in db:
-                # fallback: pick a random key
-                key = random.choice(list(db.keys()))
+                newline_keys = [k for k in db.keys() if k.endswith("\n")]
+                if newline_keys:
+                    key = random.choice(newline_keys)
+                else:
+                    key = random.choice(list(db.keys()))
+
 
             res = db[key]
             if not res:
-                return None
+                return ""
 
             c = random.choices(list(res.keys()), list(res.values()))[0]
             msg += c
@@ -87,6 +92,7 @@ class Markov():
         db = self.open_database()
         attemptCount = 0
         inputString = inputString[-self.__order:]
+        # print(inputString)
         while attemptCount < 20:
             output = self.gen_attempt(db, inputString)
             if output:
@@ -104,7 +110,7 @@ class Markov():
     
     def get_dict_from_buffer(self, in_dict, data):
         for i in range(len(data) - self.__order):
-            print(i)
+            # print(i)
             key = data[i:i+self.__order]
             char = data[i+self.__order]
                 
@@ -119,30 +125,23 @@ class Markov():
 
 markov = Markov()
 
-# if not os.path.isfile("markov_virtual.db"):
-#     with open('all_messages.txt', 'r') as file:
-#         in_dict = {}
-#         buffer = file.read()
-#         in_dict = markov.get_dict_from_buffer(in_dict, buffer)
-#         markov.learn(in_dict)
-
 
 parser = argparse.ArgumentParser()
-mode = parser.add_mutually_exclusive_group(required=True)
-mode.add_argument("-train", metavar="TEXT")
-mode.add_argument("-gen", metavar="TEXT")
-
+parser.add_argument("-train", action="store_true", help="train mode, input from stdin")
+parser.add_argument("-gen", type=str, help="generate mode, input string")
 args = parser.parse_args()
 
-# Process based on mode
 if args.train:
     in_dict = {}
-    buffer = args.train
+    buffer = sys.stdin.read()
     in_dict = markov.get_dict_from_buffer(in_dict, buffer)
     markov.learn(in_dict)
 
 elif args.gen:
-    if markov.hasResponse(args.gen):
-        print(markov.gen(args.gen))
-    else:
-        print(None)
+    genText = args.gen + "\n"
+    print(markov.gen(genText))
+    # removed bc it breaks shit lmao
+    # if markov.hasResponse(genText):
+        # print(markov.gen(genText))
+    # else:
+    #     print(None)

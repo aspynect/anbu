@@ -291,7 +291,7 @@ jetSocket.addEventListener("message", async event => {
     }
     let posted: boolean
     if (checkEligibility(userData)) {
-        posted = await replyToPost(`${postContents}\n`, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
+        posted = await replyToPost(`${postContents}`, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
     } else {
         console.log(`Ineligible for ${(new Date(userData.timestamp).getTime() - Date.now())/(60*1000)}`)
         return

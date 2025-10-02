@@ -10,25 +10,34 @@ console.log(manager.session);
 
 const dids: string[] = []
 
-async function train(trainString: string) {
-    return await new Promise((resolve, reject) => {
-        const process = spawn("./env/bin/python", ["markov.py", "-train", trainString]);
+function train(trainString: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const process = spawn("./env/bin/python", ["markov.py", "-train"]);
 
         let stderr = "";
 
-        process.stderr.on("data", (data) => {
+            process.stderr.on("data", (data) => {
             stderr += data.toString();
         });
 
         process.on("close", (code) => {
-        if (code !== 0) {
-            reject(new Error(`Python script exited with code ${code}: ${stderr}`));
-        } else {
-            resolve("");
-        }
+            if (code !== 0) {
+                reject(new Error(`Python script exited with code ${code}: ${stderr}`));
+            } else {
+                resolve();
+            }
+        });
+
+        process.stdin.write(trainString, (err) => {
+            if (err) {
+                reject(err);
+            }
+        process.stdin.end();
         });
     });
 }
+
+
 
 for (const did of dids) {
     let cur = ""
