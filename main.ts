@@ -31,36 +31,104 @@ const didData = await ok(
 	);
 const did = didData.did
 
-
-const jetURL = new URL("wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post")
-jetURL.searchParams.append("wantedDids", did)
-const jetSocket = new WebSocket(jetURL);
-
-const spaceURL = new URL("https://spacedust.microcosm.blue/subscribe")
-spaceURL.searchParams.append("wantedSubjectDids", did)
-spaceURL.searchParams.append("wantedSources", "app.bsky.graph.follow:subject")
-// spaceURL. searchParams.append("instant", "true")
-const spaceSocket = new WebSocket(spaceURL)
+let jetSocket: WebSocket
+let spaceSocket: WebSocket
 
 
-function updateUsers() {
-    jetSocket.send(JSON.stringify({
-        "type": "options_update",
-        "payload": {
-            "wantedCollections": ["app.bsky.feed.post"],
-            "wantedDids": [...users.keys()],
-            "maxMessageSizeBytes": 1000000
+async function jetMessage(event: MessageEvent) {
+    if (typeof event.data !== "string") return;
+    const msg = JSON.parse(event.data)
+    if (msg.kind !== "commit" || msg.commit?.operation !== "create") return;
+    console.log(msg)
+
+    const postContents = `${msg.commit.record.text}`
+    if (postContents.length < 12) return;
+
+    const interactionDid = msg.did
+    const userData = users.get(interactionDid)
+    if (!userData) return
+
+    if (!await followCheck(interactionDid)) {
+        users.delete(interactionDid)
+        updateUsers()
+        console.log(`Removed user ${interactionDid}`)
+        return
+    }
+    {
+        let trainingString = ""
+        if (msg.reply?.parent.$type === "app.bsky.feed.defs#postView") {
+            const parentText = msg.reply.parent.record.text
+            if (typeof parentText === "string" && parentText.length >= 10) {
+                console.log("parent: " + parentText)
+                trainingString += escapeNewlines(parentText) + "\n"
+            }
         }
-    }))
-    console.log(users)
-    fs.writeFile('users.json', JSON.stringify(Object.fromEntries(users), null, 4), (err) => {
-        if (err) {
-            console.log('Error writing file:', err);
-        } else {
-            console.log('Successfully wrote file');
-        }
-    });
-};
+        trainingString += escapeNewlines(postContents) + "\n"
+        await train(trainingString)
+    }
+    let posted: boolean
+    if (checkEligibility(userData)) {
+        posted = await replyToPost(`${postContents}`, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
+    } else {
+        console.log(`Ineligible for ${(new Date(userData.timestamp).getTime() - Date.now())/(60*1000)}`)
+        return
+    }
+    if (posted) updateTimestamp(userData)
+    updateUsers()
+}
+
+function spaceMessage(event: MessageEvent) {
+    if (typeof event.data !== "string") return;
+    const msg = JSON.parse(event.data)
+    console.log(msg)
+    const followerDid: string = msg.link.source_record.split("/")[2]
+    // TODO change the default later (actually not maybe tbh i think its fun to get a reply early)
+    users.set(followerDid, {timestamp: new Date().toISOString()/*randomFutureDate(3600000, 900000)*/, config: {baseInterval: 1000*60*60*24, stdev: 1000*60*60*3}
+    })
+    updateUsers()
+}
+
+function jetConnect() {
+    const jetURL = new URL("wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post")
+    jetURL.searchParams.append("wantedDids", did)
+    jetSocket = new WebSocket(jetURL);
+
+    jetSocket.onopen = () => updateUsers()
+    
+    jetSocket.onclose = () => {
+        console.log("Jetstream socket closed, reconnecting in 1 second")
+        setTimeout(jetConnect, 1000)
+    }
+
+    jetSocket.onerror = (error) => {
+        console.error(`Jetstream socket encountered error: ${error}. Closing socket`)
+        jetSocket.close()
+    }
+
+    jetSocket.addEventListener("message", async event => await jetMessage(event))
+
+}
+
+function spaceConnect() {
+    const spaceURL = new URL("https://spacedust.microcosm.blue/subscribe")
+    spaceURL.searchParams.append("wantedSubjectDids", did)
+    spaceURL.searchParams.append("wantedSources", "app.bsky.graph.follow:subject")
+    // spaceURL. searchParams.append("instant", "true")
+    spaceSocket = new WebSocket(spaceURL)
+
+    spaceSocket.onclose = () => {
+        console.log("Spacedust socket closed, reconnecting in 1 second")
+        setTimeout(spaceConnect, 1000)
+    }
+
+    spaceSocket.onerror = (error) => {
+        console.error(`Spacedust socket encountered error: ${error}. Closing socket`)
+        jetSocket.close()
+    }
+
+    spaceSocket.addEventListener("message", event => spaceMessage(event))
+}
+
 
 function escapeNewlines(input: string): string {
     return input.replace(/\n/g, "\\n");
@@ -69,7 +137,6 @@ function escapeNewlines(input: string): string {
 function unescapeNewlines(input: string): string {
     return input.replace(/\\n/g, "\n");
 }
-
 
 async function train(trainString: string): Promise<void> {
     return await new Promise((resolve, reject) => {
@@ -94,7 +161,6 @@ async function train(trainString: string): Promise<void> {
         process.stdin.end();
     });
 }
-
 
 async function gen(inputString: string): Promise<string | null> {
     return await new Promise((resolve, reject) => {
@@ -129,6 +195,25 @@ async function gen(inputString: string): Promise<string | null> {
     });
 }
 
+
+function updateUsers() {
+    jetSocket.send(JSON.stringify({
+        "type": "options_update",
+        "payload": {
+            "wantedCollections": ["app.bsky.feed.post"],
+            "wantedDids": [...users.keys()],
+            "maxMessageSizeBytes": 1000000
+        }
+    }))
+    console.log(users)
+    fs.writeFile('users.json', JSON.stringify(Object.fromEntries(users), null, 4), (err) => {
+        if (err) {
+            console.log('Error writing file:', err);
+        } else {
+            console.log('Successfully wrote file');
+        }
+    });
+};
 
 function checkEligibility(userData: UserData): boolean {
     return new Date().toISOString() > userData.timestamp
@@ -197,6 +282,8 @@ async function replyToPost(contents: string, post: AppBskyFeedPost.Main, cid: st
     console.log(data)
     return true
 }
+
+
 
 setInterval(async () => {
     const data = await ok(
@@ -271,60 +358,5 @@ setInterval(async () => {
     updateUsers()
 }, 30 * 1000)
 
-jetSocket.onopen = () => {
-    updateUsers()
-}
-
-
-jetSocket.addEventListener("message", async event => {
-    if (typeof event.data !== "string") return;
-    const msg = JSON.parse(event.data)
-    if (msg.kind !== "commit" || msg.commit?.operation !== "create") return;
-    console.log(msg)
-
-    const postContents = `${msg.commit.record.text}`
-    if (postContents.length < 12) return;
-
-    const interactionDid = msg.did
-    const userData = users.get(interactionDid)
-    if (!userData) return
-
-    if (!await followCheck(interactionDid)) {
-        users.delete(interactionDid)
-        updateUsers()
-        console.log(`Removed user ${interactionDid}`)
-        return
-    }
-    {
-        let trainingString = ""
-        if (msg.reply?.parent.$type === "app.bsky.feed.defs#postView") {
-            const parentText = msg.reply.parent.record.text
-            if (typeof parentText === "string" && parentText.length >= 10) {
-                console.log("parent: " + parentText)
-                trainingString += escapeNewlines(parentText) + "\n"
-            }
-        }
-        trainingString += escapeNewlines(postContents) + "\n"
-        await train(trainingString)
-    }
-    let posted: boolean
-    if (checkEligibility(userData)) {
-        posted = await replyToPost(`${postContents}`, msg.commit.record, msg.commit.cid, `at://${interactionDid}/${msg.commit.collection}/${msg.commit.rkey}`)
-    } else {
-        console.log(`Ineligible for ${(new Date(userData.timestamp).getTime() - Date.now())/(60*1000)}`)
-        return
-    }
-    if (posted) updateTimestamp(userData)
-    updateUsers()
-})
-
-spaceSocket.addEventListener("message", event => {
-    if (typeof event.data !== "string") return;
-    const msg = JSON.parse(event.data)
-    console.log(msg)
-    const followerDid: string = msg.link.source_record.split("/")[2]
-    // TODO change the default later (actually not maybe tbh i think its fun to get a reply early)
-    users.set(followerDid, {timestamp: new Date().toISOString()/*randomFutureDate(3600000, 900000)*/, config: {baseInterval: 1000*60*60*24, stdev: 1000*60*60*3}
-    })
-    updateUsers()
-})
+jetConnect()
+spaceConnect()
