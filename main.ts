@@ -205,7 +205,7 @@ function updateUsers() {
             "maxMessageSizeBytes": 1000000
         }
     }))
-    console.log(users)
+    // console.log(users)
     fs.writeFile('users.json', JSON.stringify(Object.fromEntries(users), null, 4), (err) => {
         if (err) {
             console.log('Error writing file:', err);
