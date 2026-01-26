@@ -56,7 +56,9 @@ async function jetMessage(event: MessageEvent) {
     }
     {
         let trainingString = ""
+        let isReply = false
         if (msg.reply?.parent.$type === "app.bsky.feed.defs#postView") {
+            isReply = true
             const parentText = msg.reply.parent.record.text
             if (typeof parentText === "string" && parentText.length >= 10) {
                 console.log("parent: " + parentText)
@@ -65,6 +67,7 @@ async function jetMessage(event: MessageEvent) {
         }
         trainingString += escapeNewlines(postContents) + "\n"
         await train(trainingString)
+        if (isReply) return
     }
     let posted: boolean
     if (checkEligibility(userData)) {
