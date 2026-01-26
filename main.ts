@@ -57,7 +57,7 @@ async function jetMessage(event: MessageEvent) {
     {
         let trainingString = ""
         let isReply = false
-        if (msg.reply?.parent) {
+        if (msg.reply?.parent.$type === "app.bsky.feed.defs#postView")
             isReply = true
             const parentText = msg.reply.parent.record.text
             if (typeof parentText === "string" && parentText.length >= 10) {
